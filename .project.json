@@ -1,0 +1,9 @@
+{
+  "type": "Projects",
+  "created": "2025-08-15",
+  "version": "0.1.0-dev",
+  "description": "UK bill payment app for credit-excluded individuals with biller integrations and credit rebuilding features",
+  "syncStatus": "current",
+  "lastModified": "2025-08-15",
+  "continueFrom": "initial-setup"
+}
