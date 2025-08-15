@@ -1,8 +1,17 @@
 -- BillPaymentApp Database Schema for Supabase
--- Run this in your Supabase SQL Editor
+-- Fixed version - handles existing extensions
 
--- Enable UUID extension
+-- Enable UUID extension (if not already enabled)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Drop existing tables if they exist (for clean setup)
+DROP TABLE IF EXISTS public.audit_logs CASCADE;
+DROP TABLE IF EXISTS public.notifications CASCADE;
+DROP TABLE IF EXISTS public.payment_methods CASCADE;
+DROP TABLE IF EXISTS public.transactions CASCADE;
+DROP TABLE IF EXISTS public.bills CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP VIEW IF EXISTS public.dashboard_stats CASCADE;
 
 -- Users table (extends Supabase auth.users)
 CREATE TABLE public.profiles (
@@ -19,7 +28,7 @@ CREATE TABLE public.profiles (
 
 -- Bills table
 CREATE TABLE public.bills (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     biller_name VARCHAR(255) NOT NULL,
     biller_type VARCHAR(50) CHECK (biller_type IN ('utility', 'council', 'telecom', 'water', 'broadband', 'other')),
@@ -36,7 +45,7 @@ CREATE TABLE public.bills (
 
 -- Transactions table
 CREATE TABLE public.transactions (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     bill_id UUID REFERENCES public.bills(id) ON DELETE SET NULL,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
@@ -52,7 +61,7 @@ CREATE TABLE public.transactions (
 
 -- Payment methods table
 CREATE TABLE public.payment_methods (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     type VARCHAR(20) CHECK (type IN ('bank_account', 'card')),
     provider VARCHAR(50), -- 'truelayer', 'stripe', etc
@@ -66,7 +75,7 @@ CREATE TABLE public.payment_methods (
 
 -- Notifications table
 CREATE TABLE public.notifications (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     bill_id UUID REFERENCES public.bills(id) ON DELETE CASCADE,
     type VARCHAR(50) CHECK (type IN ('reminder', 'payment_success', 'payment_failed', 'overdue', 'kyc_update')),
@@ -80,7 +89,7 @@ CREATE TABLE public.notifications (
 
 -- Audit log table
 CREATE TABLE public.audit_logs (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     action VARCHAR(100) NOT NULL,
     entity_type VARCHAR(50),
@@ -185,11 +194,15 @@ BEGIN
     VALUES (
         NEW.id,
         NEW.email,
-        NEW.raw_user_meta_data->>'full_name'
-    );
+        COALESCE(NEW.raw_user_meta_data->>'full_name', '')
+    )
+    ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 -- Trigger to create profile on signup
 CREATE TRIGGER on_auth_user_created
@@ -245,4 +258,8 @@ VALUES
     ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'BT Broadband', 'broadband', 35.99, CURRENT_DATE - 2, 'overdue');
 */
 
-COMMENT ON SCHEMA public IS 'BillPaymentApp - UK Bill Payment Platform Database Schema';
+-- Success message
+DO $$
+BEGIN
+    RAISE NOTICE 'BillPaymentApp database schema created successfully!';
+END $$;
