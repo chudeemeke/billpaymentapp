@@ -15,9 +15,6 @@ const nextConfig = {
     domains: ['cloudflare-ipfs.com', 'imagedelivery.net'],
     unoptimized: true // For Cloudflare Pages
   },
-  experimental: {
-    serverActions: true
-  },
   // Cloudflare Pages compatibility
   output: 'standalone',
   poweredByHeader: false,
