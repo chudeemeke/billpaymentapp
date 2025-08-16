@@ -72,4 +72,6 @@ Thumbs.db
 
 # Lock files (keep package-lock.json)
 yarn.lock
-pnpm-lock.yaml
+pnpm-lock.yaml.next/
+node_modules/
+.env.local
